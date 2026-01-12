@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Attendance Blockchain</title>
+  <style>
+    body { font-family: Arial; max-width: 700px; margin: 30px auto; }
+    input, button, select { width:100%; padding:10px; margin:8px 0; }
+    table { width:100%; border-collapse:collapse; margin-top:20px; }
+    th, td { border:1px solid #ccc; padding:8px; text-align:left; }
+    th { background:#f0f0f0; }
+    #msg, #validMsg { padding:10px; display:none; border-radius:4px; margin-top:10px; }
+  </style>
+</head>
+<body>
+
+  <h2>📝 Attendance Blockchain - Mark Attendance</h2>
+
+  <label>Student Name</label>
+  <input id="name" type="text">
+
+  <label>Date</label>
+  <input id="date" type="date">
+
+  <label>Time</label>
+  <input id="time" type="time">
+
+  <label>Status</label>
+  <select id="status">
+    <option value="Present">Present</option>
+    <option value="Absent">Absent</option>
+  </select>
+
+  <button onclick="addEntry()">Add Attendance</button>
+  <div id="msg"></div>
+
+
+  <h3>Blockchain Ledger</h3>
+  <table id="tbl">
+    <tr><th>Index</th><th>Student</th><th>Date</th><th>Time</th><th>Status</th></tr>
+  </table>
+
+
+  <!-- ⭐⭐⭐ ADDED BELOW: Attendance History (Nothing above changed) ⭐⭐⭐ -->
+
+  <h3>Search Attendance History</h3>
+  <input id="historyName" placeholder="Enter Student Name">
+  <button onclick="loadHistory()">Show History</button>
+
+  <div id="historyBox" style="margin-top:15px; border:1px solid #ccc; padding:10px;"></div>
+
+
+<script>
+const API = "http://127.0.0.1:5000";
+
+async function addEntry(){
+  const student = document.getElementById('name').value.trim();
+  const date = document.getElementById('date').value;
+  const time = document.getElementById('time').value;
+  const status = document.getElementById('status').value;
+
+  if(!student || !date || !time){
+    alert("Please fill all fields!");
+    return;
+  }
+
+  const body = { student, date, time, status };
+
+  await fetch(`${API}/add`, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(body)
+  });
+
+  document.getElementById('msg').style.display='block';
+  document.getElementById('msg').style.background='#d4edda';
+  document.getElementById('msg').innerText='✔ Attendance Added!';
+  loadChain();
+}
+
+async function loadChain(){
+  const res = await fetch(`${API}/chain`);
+  const chain = await res.json();
+  const tbl = document.getElementById('tbl');
+
+  tbl.innerHTML = '<tr><th>Index</th><th>Student</th><th>Date</th><th>Time</th><th>Status</th></tr>';
+
+  chain.forEach(b=>{
+    const row = tbl.insertRow();
+    row.insertCell(0).innerText = b.index;
+    const data = b.data || {};
+    row.insertCell(1).innerText = data.student || '-';
+    row.insertCell(2).innerText = data.date || '-';
+    row.insertCell(3).innerText = data.time || '-';
+    row.insertCell(4).innerText = data.status || '-';
+  });
+}
+
+
+// ⭐⭐⭐ NEW FUNCTION: Attendance History ⭐⭐⭐
+async function loadHistory() {
+  const student = document.getElementById('historyName').value.trim();
+  const box = document.getElementById('historyBox');
+
+  if (!student) {
+    box.innerHTML = "<b>Please enter a name</b>";
+    return;
+  }
+
+  const res = await fetch(`${API}/history/${student}`);
+  const data = await res.json();
+
+  if (data.length === 0) {
+    box.innerHTML = `<b>No attendance history found for ${student}</b>`;
+    return;
+  }
+
+  let html = `<h3>History for ${student}</h3>`;
+  html += `<table border="1" width="100%" style="border-collapse:collapse;">
+            <tr><th>Date</th><th>Time</th><th>Status</th></tr>`;
+
+  data.forEach(d => {
+    html += `<tr>
+              <td>${d.date}</td>
+              <td>${d.time}</td>
+              <td>${d.status}</td>
+            </tr>`;
+  });
+
+  html += "</table>";
+  box.innerHTML = html;
+}
+
+
+loadChain();
+</script>
+</body>
+</html>
+
